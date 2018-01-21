@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="habitCheckMapper">
+
+
+<sql id="select-habitcheck-sql">
+	SELECT	habit_no,
+			day,
+			habit_date,
+			habit_state
+	FROM	habit_check
+</sql>
+<sql id="select-habitcheck-count-sql">
+	SELECT	COUNT(*)
+	FROM	habit_check
+</sql>
+
+
+<sql id="select-habitcheck-habit-sql">
+	SELECT	c.habit_no,
+			c.day,
+			c.habit_date,
+			c.habit_state,
+			h.doer_id,
+			h.habit_title,
+			h.habit_start,
+			h.habit_end,
+			h.completion,
+			h.achievement
+	FROM	habit_check c, habit h
+	
+</sql>
+
+<resultMap type="habitCheck" id="habitcheck-resultmap">
+	<id column="habit_no" property="habitNo"/>
+	<result column="day" property="day"/>
+	<result column="habit_date" property="habitDate"/>
+	<result column="habit_state" property="habitState"/>
+</resultMap>
+
+<resultMap type="habitCheck" id="habitcheck-habit-resultmap" extends="habitcheck-resultmap">
+	<association property="habit" resultMap="habitMapper.habit-resultmap"/>
+<!-- 		<id column="habit_no" property="habitNo"/>
+		<result column="doer_id" property="doerId"/>
+		<result column="habit_title" property="habitTitle"/>
+		<result column="habit_start" property="habitStart"/>
+		<result column="habit_end" property="habitEnd"/>
+		<result column="completion" property="completion"/>
+		<result column="achievement" property="achievement"/>
+	</association> -->
+</resultMap>
+
+
+<!-- insert -->
+<insert id="insertHabitCheck" parameterType="habitCheck">
+	INSERT INTO	habit_check
+	VALUES(
+		#{habitNo},
+		#{day},
+		#{habitDate},
+		#{habitState}
+	)
+</insert>
+
+
+<!-- update -->
+<update id="updateHabitCheck" parameterType="habitCheck">
+	UPDATE	habit_check
+	SET		habit_date = #{habitDate},
+			habit_state = #{habitState}
+	WHERE	habit_no = #{habitNo}
+	AND		day = #{day}
+</update>
+
+<!-- delete -->
+<delete id="deleteHabitCheckAfterDate" parameterType="java.util.HashMap">
+	DELETE FROM habit_check
+	WHERE		habit_no = #{habitNo}
+	AND			habit_date >= #{habitDate}
+</delete>
+
+<!-- select -->
+<select id="selectHabitCheckDoingToday" parameterType="java.util.Date" resultMap="habitcheck-habit-resultmap">
+	<include refid="select-habitcheck-habit-sql"/>
+	WHERE	c.habit_no = h.habit_no (+)
+	AND		h.completion = 'n'
+	AND		c.habit_date = #{value}
+</select>
+
+<select id="selectHabitCheckTodayByHabitNo" parameterType="java.util.HashMap" resultMap="habitcheck-resultmap">
+	<include refid="select-habitcheck-sql"/>
+	WHERE	habit_no = #{habitNo}
+	AND		habit_date =  to_date(to_char( sysdate, 'yyyy-mm-dd'))
+</select>
+
+<!-- 전체 -->
+</mapper>

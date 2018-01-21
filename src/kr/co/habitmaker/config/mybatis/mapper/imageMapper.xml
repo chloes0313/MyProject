@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="imageMapper">
+<sql id="all-column">
+	journal_no,
+	image_save_name,
+	image_original_name
+</sql>
+
+<sql id="select-image-sql">
+	SELECT	<include refid="all-column"/>
+	FROM	image
+</sql>
+
+<resultMap type="image" id="image-resultmap">
+	<result column="journal_no" property="journalNo"/>
+	<result column="image_save_name" property="imageSaveName"/>
+	<result column="image_original_name" property="imageOriginalName"/>
+</resultMap>
+
+
+<insert id="insertImage" parameterType="image">
+	INSERT INTO	image
+	VALUES	(
+				#{journalNo},
+				#{imageSaveName},
+				#{imageOriginalName}
+	)
+</insert>
+
+<delete id="deleteImage" parameterType="java.util.HashMap">
+	DELETE FROM	image
+	WHERE		journal_no	= #{journalNo}
+	AND			image_save_name = #{imageSaveName}
+</delete>
+
+
+<select id="selectImageListByJournalNo" parameterType="_int" resultMap="image-resultmap">
+	<include refid="select-image-sql"/>
+	WHERE	journal_no = #{value}
+</select>
+
+<select id="selectImageBySaveName" parameterType="java.util.HashMap" resultMap="image-resultmap">
+	<include refid="select-image-sql"/>
+	WHERE	journal_no = #{journalNo}
+	AND		image_save_name = #{imageSaveName}
+</select>
+
+</mapper>

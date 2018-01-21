@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="doerMapper">
+
+<sql id="all-column">
+	id, password, name, email
+</sql>
+
+<!-- saa -->
+<sql id="select-doer-sql">
+	SELECT	<include refid="all-column"/>
+	FROM	DOER
+</sql>
+<!-- 권한 테이블 조회 SQL -->
+<sql id="authorities-select-sql">
+	SELECT	user_id, 
+			authority
+	FROM	authorities
+</sql>
+
+
+<resultMap type="doer" id="doer-resultmap">
+	<id		column="id"	property="id"/>
+	<result	column="password" property="password"/>
+	<result	column="name" property="name"/>
+	<result	column="email" property="email"/>
+</resultMap>
+
+<resultMap	type="doer"	id="doer-habit-reultmap" extends="doer-resultmap">
+	<collection property="habitList" ofType="habit">
+		<id		column="habit_no" property="habitNo"/>
+		<result	column="doer_id" property="doerId"/>
+		<result	column="habit_title" property="habitTitle"/>
+		<result	column="habit_start" property="habitStart"/>
+		<result	column="habit_end" property="habitEnd"/>
+		<result	column="completion" property="completion"/>
+		<result column="achievement" property="achievement"/>	
+	</collection>
+</resultMap>
+<!-- 권한 ResultMapping -->
+<resultMap id="authority-resultmap" type="authority">
+	<id column="user_id" property="userId"/>
+	<result column="authority" property="authority"/>
+</resultMap>
+
+
+<!-- insert -->
+<insert id="insertDoer" parameterType="doer">
+	INSERT INTO	doer
+	VALUES(		
+		#{id},
+		#{password},
+		#{name},
+		#{email}
+	)
+</insert>
+<!-- 권한 insert -->
+<insert id="insertAuthority" parameterType="authority">
+ 	INSERT INTO	authorities 
+ 	VALUES(
+ 		#{userId},
+ 		#{authority}
+ 	)
+</insert>
+
+<!-- update -->
+<update id="updateDoer" parameterType="doer">
+	UPDATE	doer
+	SET		password = #{password},
+			name = #{name},
+			email = #{email}
+	WHERE	id = #{id}
+</update>
+
+
+<!-- delete -->
+<delete id="deleteDoer" parameterType="java.lang.String">
+	DELETE FROM	doer
+	WHERE		id = #{value}
+</delete>
+
+
+<!-- select -->
+<!-- 모두 -->
+<select id="selectAllDoers" resultMap="doer-resultmap">
+	<include refid="select-doer-sql"/>
+	ORDER BY id
+</select>
+
+
+
+<!-- 아이디로 -->
+<select id="selectDoerById" parameterType="java.lang.String" resultMap="doer-resultmap">
+	<include refid="select-doer-sql"/>
+	WHERE id = #{value}
+</select>
+
+<!-- ID로 그 사용자의 권한 조회 -->
+<select id="selectAuthoritiesById" parameterType="java.lang.String" resultMap="authority-resultmap">
+	<include refid="authorities-select-sql"/>
+	WHERE user_id = #{value}
+</select>
+
+
+<!-- 이름으로 (부분검색) -->
+<select id="selectDoerByName" parameterType="java.lang.String" resultMap="doer-resultmap">
+	<include refid="select-doer-sql"/>
+	WHERE name LIKE '%'||#{value}||'%'
+</select>
+
+
+<!-- 회원전체수 : 페이징 -->
+<select id="selectCountDoer" resultType="_int">
+	SELECT	COUNT(*)
+	FROM	doer
+</select>
+
+<select id="selectAllDoersPaging" parameterType="java.util.HashMap" resultMap="doer-resultmap">
+	SELECT	<include refid="all-column"/>
+	FROM (	
+		SELECT	rownum rnum, <include refid="all-column"/>
+		FROM (	
+			SELECT	<include refid="all-column"/>
+			FROM	doer
+			ORDER BY id, name
+		)
+		WHERE rownum &lt;= #{endIdx}
+	) <!-- &lt;->크다 표시! -->
+	WHERE rnum >= #{startIdx}
+</select>
+</mapper>

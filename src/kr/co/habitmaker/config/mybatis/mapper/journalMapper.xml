@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="journalMapper">
+
+<sql id="all-column">
+	journal_no, journal_write_id, journal_write_date, journal_title, journal_contents, journal_iconic_image
+</sql>
+
+
+<sql id="select-journal-sql">
+	SELECT	<include refid="all-column"/>
+	FROM	journal
+</sql>
+
+<sql id="select-journal-image-sql">
+	SELECT	j.journal_no,
+			j.journal_write_id,
+			j.journal_write_date,
+			j.journal_title,
+			j.journal_contents,
+			j.journal_iconic_image,
+			i.image_original_name,
+			i.image_save_name
+	FROM	journal j, image i 
+	WHERE	j.journal_no = i.journal_no (+)
+</sql>
+
+
+<sql id="select-journal-count-sql">
+	SELECT	COUNT(*)
+	FROM	journal
+</sql>
+
+
+
+<resultMap type="journal" id="journal-resultmap">
+	<id		column="journal_no"	property="journalNo"/>
+	<result	column="journal_write_id" property="journalWriteId"/>
+	<result	column="journal_write_date" property="journalWriteDate"/>
+	<result	column="journal_title" property="journalTitle"/>
+	<result	column="journal_contents" property="journalContents"/>
+	<result	column="journal_iconic_image" property="journalIconicImage"/>
+</resultMap>
+
+<!-- 저널 이미지 받아오기 -->
+<resultMap	type="journal"	id="journal-image-resultmap" extends="journal-resultmap">
+	<collection property="imageList" resultMap="imageMapper.image-resultmap"/>
+</resultMap>
+
+
+
+<!-- insert -->
+<insert id="insertJournal" parameterType="journal">
+	<selectKey order="BEFORE" keyProperty="journalNo" resultType="_int">
+		SELECT	JOURNAL_NO_SEQ.nextval
+		FROM	dual
+	</selectKey>
+	INSERT INTO	journal
+	VALUES(		
+		#{journalNo},
+		#{journalWriteId},
+		#{journalWriteDate},
+		#{journalTitle},
+		#{journalContents},
+		#{journalIconicImage}
+	)
+</insert>
+
+<!-- update -->
+<update id="updateJournal" parameterType="journal">
+	UPDATE	journal
+	SET		journal_write_date = #{journalWriteDate},
+			journal_title = #{journalTitle},
+			journal_contents = #{journalContents},
+			journal_iconic_image = #{journalIconicImage}
+	WHERE	journal_no = #{journalNo}
+</update>
+
+
+
+
+
+<!-- delete -->
+<!-- 
+<delete id="deleteJournal" parameterType="_int">
+	DELETE FROM journal
+	WHERE		journal_no = #{value}
+</delete>
+ -->
+<delete id="deleteJournal" parameterType="java.util.ArrayList">
+	DELETE FROM	journal
+	<where>
+		<choose>
+			<when test="list != null and list.size() > 0">
+				journal_no IN
+				<foreach collection="list" open="(" close=")" separator="," item="journalNo">
+					#{journalNo}
+				</foreach>
+			</when>
+			<otherwise>
+			1 = -1
+			</otherwise>
+		</choose>
+	</where>
+</delete>
+
+
+<!-- select -->
+<!-- 특정 저널 detail -->
+<select id="selectJournalByNo" parameterType="_int" resultMap="journal-resultmap">
+	<include refid="select-journal-sql"/>
+	WHERE journal_no = #{value}
+</select>
+
+
+<!-- 특정 저널 detail -->
+<select id="selectJournalByNoInDetail" parameterType="_int" resultMap="journal-image-resultmap">
+	<include refid="select-journal-image-sql"/>
+	AND j.journal_no = #{value}
+</select>
+
+<!-- 모두 -->
+<select id="selectJournalAll" resultMap="journal-resultmap">
+	<include refid="select-journal-sql"/>
+	ORDER BY journal_no
+</select>
+
+<!-- COUNT -->
+<select id="selectCountJournalAll" resultType="_int">
+	<include refid="select-journal-count-sql"/>
+</select>
+
+
+<select id="selectCountJournalByDoer" parameterType="java.lang.String" resultType="_int">
+	<include refid="select-journal-count-sql"/>
+	WHERE	journal_write_id = #{value}
+</select>
+
+<select id="selectCountJournalByTitle" parameterType="java.util.HashMap" resultType="_int">
+	<include refid="select-journal-count-sql"/>
+	WHERE	journal_write_id = #{journalWriteId}
+	AND		journal_title LIKE	'%'||#{title}||'%'
+</select>
+
+
+<!-- PAGING -->
+<select id="selectJournalAllPaging" parameterType="java.util.HashMap" resultMap="journal-resultmap">
+	SELECT	<include refid="all-column"/>
+	FROM (
+		SELECT	rownum rnum, <include refid="all-column"/>
+		FROM (	
+			SELECT	<include refid="all-column"/>
+			FROM	journal
+			ORDER BY journal_no
+		)
+		WHERE rownum &lt;= #{endIdx}
+	)
+	WHERE rnum >= #{startIdx}
+</select>
+
+<select id="selectJournalByDoerPaging" parameterType="java.util.HashMap" resultMap="journal-resultmap">
+	SELECT	<include refid="all-column"/>
+	FROM (
+		SELECT	rownum rnum, <include refid="all-column"/>
+		FROM (	
+			SELECT	<include refid="all-column"/>
+			FROM	journal
+			WHERE	journal_write_id = #{journalWriteId}
+			ORDER BY journal_no DESC
+		)
+		WHERE rownum &lt;= #{endIdx}
+	)
+	WHERE rnum >= #{startIdx}
+</select>
+
+<select id="selectJournalByTitlePaging" parameterType="java.util.HashMap" resultMap="journal-resultmap">
+	SELECT	<include refid="all-column"/>
+	FROM (
+		SELECT	rownum rnum, <include refid="all-column"/>
+		FROM (	
+			SELECT	<include refid="all-column"/>
+			FROM	journal
+			WHERE	journal_write_id = #{journalWriteId}
+			AND		journal_title	LIKE	'%'||#{journalWriteId}||'%'
+			ORDER BY journal_no
+		)
+		WHERE rownum &lt;= #{endIdx}
+	)
+	WHERE rnum >= #{startIdx}
+</select>
+
+</mapper>

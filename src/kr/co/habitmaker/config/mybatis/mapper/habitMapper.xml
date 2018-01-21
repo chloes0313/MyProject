@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="habitMapper">
+<sql id="all-column">
+	habit_no,
+	doer_id,
+	habit_title,
+	habit_start,
+	habit_end,
+	completion,
+	achievement
+</sql>
+<sql id="all-join-column">
+	h.habit_no,
+	h.doer_id,
+	h.habit_title,
+	h.habit_start,
+	h.habit_end,
+	h.completion,
+	h.achievement,
+	c.day,
+	c.habit_date,
+	c.habit_state
+</sql>
+
+<sql id="select-habit-sql">
+	SELECT	<include refid="all-column"/>
+	FROM	habit
+</sql>
+<sql id="select-habit-count-sql">
+	SELECT	COUNT(*)
+	FROM	habit
+</sql>
+
+
+
+<sql id="select-habit-habitcheck-sql">
+	SELECT	h.habit_no,
+			h.doer_id,
+			h.habit_title,
+			h.habit_start,
+			h.habit_end,
+			h.completion,
+			h.achievement,
+			c.day,
+			c.habit_date,
+			c.habit_state
+	FROM	habit h, habit_check c
+	
+</sql>
+
+<resultMap type="habit" id="habit-resultmap">
+	<id column="habit_no" property="habitNo"/>
+	<result column="doer_id" property="doerId"/>
+	<result column="habit_title" property="habitTitle"/>
+	<result column="habit_start" property="habitStart"/>
+	<result column="habit_end" property="habitEnd"/>
+	<result column="completion" property="completion"/>
+	<result column="achievement" property="achievement"/>
+</resultMap>
+
+
+
+<resultMap type="habit" id="habit-habitcheck-resultmap" extends="habit-resultmap">
+	<collection property="habitCheck" ofType="habitCheck">
+		<result column="habit_no" property="habitNo"/>
+		<result column="day" property="day"/>
+		<result column="habit_date" property="habitDate"/>
+		<result column="habit_state" property="habitState"/>
+		</collection>
+</resultMap>
+
+<!-- insert -->
+<insert id="insertHabit" parameterType="habit">
+	<selectKey order="BEFORE" keyProperty="habitNo" resultType="_int">
+		SELECT	HABIT_NO_SEQ.nextval
+		FROM	dual
+	</selectKey>
+	INSERT INTO	habit
+	VALUES(
+		#{habitNo},
+		#{doerId},
+		#{habitTitle},
+		#{habitStart},
+		#{habitEnd},
+		#{completion},
+		#{achievement}
+	)
+</insert>
+
+
+<!-- update -->
+<update id="updateHabit" parameterType="habit">
+	UPDATE	habit
+	SET		doer_id = #{doerId},
+			habit_title = #{habitTitle},
+			habit_start = #{habitStart},
+			habit_end = #{habitEnd},
+			completion = #{completion},
+			achievement = #{achievement}
+	WHERE	habit_no = #{habitNo}
+</update>
+
+<!-- delete -->
+<!-- 해당 번호(들) 습관 삭제 -->
+<delete id="deleteHabitByHabitNo" parameterType="java.util.ArrayList">
+	DELETE FROM habit
+	<where>
+		<choose>
+			<when test="list != null and list.size() > 0">
+				habit_no IN
+				<foreach collection="list" open="(" close=")" separator="," item="habitNo">
+				#{habitNo}
+				</foreach>
+			</when>
+			<otherwise>
+			1 = -1 <!-- 아무것도 select 안되게 거짓 -->
+			</otherwise>
+		</choose>
+	</where>
+</delete>
+
+<!-- 해당 사용자 -->
+<delete id="deleteHabitByDoer" parameterType="java.lang.String">
+	DELETE FROM habit
+	WHERE		doer_id = #{value}
+</delete>
+
+
+<!-- 수행완료된 습관들  -->
+<delete id="deleteHabtisDone">
+	DELETE FROM	habit
+	WHERE		completion = 'y'
+</delete>
+<delete id="deleteHabtisDoneByDoer" parameterType="java.lang.String">
+	DELETE FROM habit
+	WHERE		doer_id = #{value}
+	AND			completion = 'y'
+</delete>
+
+<!-- select -->
+<!-- 전체 -->
+<select id="selectHabits" resultType="java.util.ArrayList">
+	<include refid="select-habit-sql"/>
+	ORDER BY	habit_no
+</select>
+<!-- 특정doer 전체 -->
+<select id="selectHabitsByDoer" parameterType="java.lang.String" resultMap="habit-resultmap">
+	<include refid="select-habit-sql"/>
+	WHERE		doer_id = #{value}
+	ORDER BY	habit_no
+</select>
+
+<!-- 습관 번호 -->
+<select id="selectHabitByHabitNo" parameterType="_int" resultMap="habit-habitcheck-resultmap">
+	<include refid="select-habit-habitcheck-sql"/>
+	WHERE	h.habit_no = c.habit_no (+)
+	AND		h.habit_no = ${value}
+	ORDER BY	c.day
+</select>
+
+<!-- 수행중인 습관 -->
+<select id="selectHabitsDoing" resultMap="habit-resultmap">
+	<include refid="select-habit-sql"/>
+	WHERE	completion = 'n'
+</select>
+<select id="selectHabitsDoingByDoer" parameterType="java.lang.String" resultMap="habit-resultmap">
+	<include refid="select-habit-sql"/>
+	WHERE	doer_id = #{value}
+	AND		completion = 'n'
+</select>
+
+<!--  수행완료한 습관 -->
+<select id="selectHabitsDone" resultMap="habit-resultmap">
+	<include refid="select-habit-sql"/>
+	WHERE	completion = 'y'
+</select>
+<select id="selectHabitsDoneByDoer" parameterType="java.lang.String" resultMap="habit-resultmap">
+	<include refid="select-habit-sql"/>
+	WHERE	doer_id = #{value}
+	AND		completion = 'y'
+</select>
+
+
+<!-- count -->
+<!-- 모든 습관들 선택-->
+<select id="selectCountHabits" resultType="_int">
+	<include refid="select-habit-count-sql"/>
+</select>
+
+<select id="selectCountHabitsByDoer" parameterType="java.lang.String" resultType="_int">
+	<include refid="select-habit-count-sql"/>
+	WHERE	doer_id = #{value}
+</select>
+
+<!-- 수행중인 습관들 선택 -->
+<select id="selectCountHabitsDoing" resultType="_int">
+	<include refid="select-habit-count-sql"/>
+	WHERE	completion = 'n'
+</select>
+<select id="selectCountHabitsDoingByDoer" parameterType="java.lang.String" resultType="_int">
+	<include refid="select-habit-count-sql"/>
+	WHERE	completion = 'n'
+	AND	doer_id = #{value}
+</select>
+
+<!-- 완료된 습관들 선택 -->
+<select id="selectCountHabitsDone" resultType="_int">
+	<include refid="select-habit-count-sql"/>
+	WHERE	completion = 'y'
+</select>
+<select id="selectCountHabitsDoneByDoer" parameterType="java.lang.String" resultType="_int">
+	<include refid="select-habit-count-sql"/>
+	WHERE	completion = 'y'
+	AND	doer_id = #{value}
+</select>
+<select id="selectCountHabitsSuccessByDoer" parameterType="java.lang.String" resultType="_int">
+	<include refid="select-habit-count-sql"/>
+	WHERE	completion = 'y'
+	AND		achievement = 'y'
+	AND		doer_id = #{value}
+</select>
+
+<select id="selectCountHabitsFailureByDoer" parameterType="java.lang.String" resultType="_int">
+	<include refid="select-habit-count-sql"/>
+	WHERE	completion = 'y'
+	AND		achievement = 'n'
+	AND		doer_id = #{value}
+</select>
+
+
+<select id="selectHabitByTodayHabitState" parameterType="java.util.HashMap" resultMap="habit-resultmap">
+
+	SELECT	<include refid="all-join-column"/>
+	FROM (	
+		<include refid="all-join-column"/>
+		FROM	habit h, habit_check c
+		WHERE	h.habit_no = c.habit_no (+)
+		AND		h.completion = 'n'
+		ORDER BY h.habit_no, c.day
+	)
+	WHERE rownum &lt;= #{endIdx}
+
+</select>
+
+
+
+
+<!-- :::::::::::::::::::::::::::페이징::::::::::::::::::::::::::: -->
+<select id="selectHabitsPaging" parameterType="java.util.HashMap" resultMap="habit-resultmap">
+	SELECT	<include refid="all-column"/>
+	FROM (	
+		SELECT	rownum rnum, <include refid="all-column"/>
+		FROM (	
+			SELECT	<include refid="all-column"/>
+			FROM	habit
+			ORDER BY habit_no
+		)
+		WHERE rownum &lt;= #{endIdx}
+	) <!-- &lt;->크다 표시! -->
+	WHERE rnum >= #{startIdx}
+</select>
+
+<select id="selectHabitsByDoerPaging" parameterType="java.util.HashMap" resultMap="habit-resultmap">
+	SELECT	<include refid="all-column"/>
+	FROM (	
+		SELECT	rownum rnum, <include refid="all-column"/>
+		FROM (	
+			SELECT	<include refid="all-column"/>
+			FROM	habit
+			WHERE	doer_id = #{doerId}
+			ORDER BY habit_no
+		)
+		WHERE rownum &lt;= #{endIdx}
+	) <!-- &lt;->크다 표시! -->
+	WHERE rnum >= #{startIdx}
+</select>
+
+<select id="selectHabitsDoingPaging" parameterType="java.util.HashMap" resultMap="habit-resultmap">
+	SELECT	<include refid="all-column"/>
+	FROM (	
+		SELECT	rownum rnum, <include refid="all-column"/>
+		FROM (	
+			SELECT	<include refid="all-column"/>
+			FROM	habit
+			WHERE	completion = 'n'
+			ORDER BY habit_no
+		)
+		WHERE rownum &lt;= #{endIdx}
+	) <!-- &lt;->크다 표시! -->
+	WHERE rnum >= #{startIdx}
+</select>
+
+<select id="selectHabitsDoingByDoerPaging" parameterType="java.util.HashMap" resultMap="habit-resultmap">
+	SELECT	<include refid="all-column"/>
+	FROM (	
+		SELECT	rownum rnum, <include refid="all-column"/>
+		FROM (	
+			SELECT	<include refid="all-column"/>
+			FROM	habit
+			WHERE	completion = 'n'
+			AND		doer_id = #{doerId}
+			ORDER BY habit_no
+		)
+		WHERE rownum &lt;= #{endIdx}
+	) <!-- &lt;->크다 표시! -->
+	WHERE rnum >= #{startIdx}
+</select>
+
+<select id="selectHabitsDonePaging" parameterType="java.util.HashMap" resultMap="habit-resultmap">
+	SELECT	<include refid="all-column"/>
+	FROM (	
+		SELECT	rownum rnum, <include refid="all-column"/>
+		FROM (	
+			SELECT	<include refid="all-column"/>
+			FROM	habit
+			ORDER BY habit_no
+		)
+		WHERE rownum &lt;= #{endIdx}
+	) <!-- &lt;->크다 표시! -->
+	WHERE rnum >= #{startIdx}
+</select>
+
+<select id="selectHabitsDoneByDoerPaging" parameterType="java.util.HashMap" resultMap="habit-resultmap">
+	SELECT	<include refid="all-column"/>
+	FROM (	
+		SELECT	rownum rnum, <include refid="all-column"/>
+		FROM (	
+			SELECT	<include refid="all-column"/>
+			FROM	habit
+			WHERE	doer_id = #{doerId}
+			ORDER BY habit_no
+		)
+		WHERE rownum &lt;= #{endIdx}
+	) <!-- &lt;->크다 표시! -->
+	WHERE rnum >= #{startIdx}
+</select>
+</mapper>
